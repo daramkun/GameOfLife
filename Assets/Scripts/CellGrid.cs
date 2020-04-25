@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,9 +18,12 @@ public class CellGrid : MonoBehaviour
 	public bool [,] Grid;
 	bool[,] BackGrid;
 
+	IEnumerator CurrentCoroutine;
+
 	void Awake ()
 	{
 		Refresh ();
+		Stop ();
 	}
 
 	public void InputWidth (string width)
@@ -34,7 +38,7 @@ public class CellGrid : MonoBehaviour
 
 	public void Refresh ()
 	{
-		Playing = false;
+		Stop ();
 
 		foreach (Transform child in transform)
 			Destroy (child.gameObject);
@@ -42,7 +46,12 @@ public class CellGrid : MonoBehaviour
 		Objects = new GameObject [Width, Height];
 		Grid = new bool [Width, Height];
 		BackGrid = new bool [Width, Height];
-		GetComponent<GridLayoutGroup> ().constraintCount = Width;
+
+		var gridLayoutGroup = GetComponent<GridLayoutGroup> ();
+		gridLayoutGroup.constraintCount = Width;
+		var rectTransform = GetComponent<RectTransform> ();
+		rectTransform.sizeDelta = new Vector2 (Width * gridLayoutGroup.cellSize.x, Height * gridLayoutGroup.cellSize.y);
+
 		for (int y = 0; y < Height; ++y)
 		{
 			for (int x = 0; x < Width; ++x)
@@ -60,19 +69,15 @@ public class CellGrid : MonoBehaviour
 	public void Play ()
 	{
 		Playing = true;
+		PlayButton.GetComponent<Button> ().enabled = false;
+		PauseButton.GetComponent<Button> ().enabled = true;
+
+		StartCoroutine (CurrentCoroutine = UpdateRoutine ());
 	}
 
-	public void Stop ()
+	private IEnumerator UpdateRoutine ()
 	{
-		Playing = false;
-	}
-
-	void FixedUpdate ()
-	{
-		PlayButton.GetComponent<Button> ().enabled = !Playing;
-		PauseButton.GetComponent<Button> ().enabled = Playing;
-
-		if (Playing)
+		while (true)
 		{
 			for (int y = 0; y < Height; ++y)
 			{
@@ -82,7 +87,7 @@ public class CellGrid : MonoBehaviour
 					int count = 0;
 					for (int yy = -1; yy <= 1; ++yy)
 					{
-						for(int xx = -1; xx <= 1; ++xx)
+						for (int xx = -1; xx <= 1; ++xx)
 						{
 							if (xx == 0 && yy == 0)
 								continue;
@@ -102,13 +107,26 @@ public class CellGrid : MonoBehaviour
 			}
 
 			SwapBuffer ();
+
+			yield return new WaitForSeconds (0.125f);
 		}
+	}
+
+	public void Stop ()
+	{
+		if (CurrentCoroutine != null)
+			StopCoroutine (CurrentCoroutine);
+		Playing = false;
+		PlayButton.GetComponent<Button> ().enabled = true;
+		PauseButton.GetComponent<Button> ().enabled = false;
 	}
 
 	int __GetValueFromGrid (bool [,] grid, int x, int y, int width, int height)
 	{
-		if (x < 0 || y < 0) return 0;
-		if (x >= width || y >= height) return 0;
+		if (x < 0) x += width;
+		if (y < 0) y += height;
+		if (x >= width) x -= width;
+		if (y >= height) y -= height;
 		return grid [x, y] ? 1 : 0;
 	}
 
