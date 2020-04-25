@@ -12,7 +12,7 @@ public class CellGrid : MonoBehaviour
 
 	public bool Playing = false;
 
-	public GameObject PlayButton, PauseButton;
+	public GameObject PlayButton, PauseButton, ConnectToggle;
 
 	GameObject [,] Objects;
 	public bool [,] Grid;
@@ -22,6 +22,8 @@ public class CellGrid : MonoBehaviour
 
 	void Awake ()
 	{
+		Canvas.GetDefaultCanvasMaterial ().enableInstancing = true;
+
 		Refresh ();
 		Stop ();
 	}
@@ -77,6 +79,8 @@ public class CellGrid : MonoBehaviour
 
 	private IEnumerator UpdateRoutine ()
 	{
+		Toggle connect = ConnectToggle.GetComponent<Toggle> ();
+
 		while (true)
 		{
 			for (int y = 0; y < Height; ++y)
@@ -91,7 +95,7 @@ public class CellGrid : MonoBehaviour
 						{
 							if (xx == 0 && yy == 0)
 								continue;
-							count += __GetValueFromGrid (Grid, x + xx, y + yy, Width, Height);
+							count += __GetValueFromGrid (Grid, x + xx, y + yy, Width, Height, connect.isOn);
 						}
 					}
 
@@ -121,12 +125,20 @@ public class CellGrid : MonoBehaviour
 		PauseButton.GetComponent<Button> ().enabled = false;
 	}
 
-	int __GetValueFromGrid (bool [,] grid, int x, int y, int width, int height)
+	int __GetValueFromGrid (bool [,] grid, int x, int y, int width, int height, bool connect)
 	{
-		if (x < 0) x += width;
-		if (y < 0) y += height;
-		if (x >= width) x -= width;
-		if (y >= height) y -= height;
+		if (connect)
+		{
+			if (x < 0) x += width;
+			if (y < 0) y += height;
+			if (x >= width) x -= width;
+			if (y >= height) y -= height;
+		}
+		else
+		{
+			if (x < 0 || y < 0 || x >= width || y >= height)
+				return 0;
+		}
 		return grid [x, y] ? 1 : 0;
 	}
 
